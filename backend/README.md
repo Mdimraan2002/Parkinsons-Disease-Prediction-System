@@ -31,3 +31,10 @@
 
 ## 📂 Project Structure
 
+parkinsons-disease-prediction-backend/
+│
+├── main.py                  # FastAPI app (API routes + ML logic)
+├── requirements.txt         # Python dependencies
+├── README.md                # Project documentation
+├── .gitignore               # Ignored files & folders
+
