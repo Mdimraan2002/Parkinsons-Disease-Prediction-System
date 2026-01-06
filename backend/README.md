@@ -31,10 +31,17 @@
 
 ## 📂 Project Structure
 
-parkinsons-disease-prediction-backend/
+```text
+📦 parkinsons-disease-prediction/
 │
-├── main.py                  # FastAPI app (API routes + ML logic)
-├── requirements.txt         # Python dependencies
-├── README.md                # Project documentation
-├── .gitignore               # Ignored files & folders
+├── 📂 backend/        → FastAPI + SVC Model
+│   │
+│   ├── 🐍 main.py                  # FastAPI app (API routes + ML logic)
+│   ├── 📄 requirements.txt         # Python dependencies
+│   ├── 📘 README.md                # Backend documentation
+│   ├── 🚫 .gitignore               # Git ignored files & folders
+│   │
+│   ├── 📂 models/                  # Generated ML artifacts (ignored in GitHub)
+│   │   ├── 🤖 parkinsons_model.pkl # Trained ML model
+│   │   └── 📏 scaler.pkl           # Feature scaler
 
