@@ -1,6 +1,20 @@
 """
-Parkinson's Disease Prediction API
-FastAPI backend using SVC model on voice biomarkers
+=========================================================
+🏥 Parkinson's Disease Prediction API
+=========================================================
+Technology  : FastAPI + Scikit-learn (SVC)
+
+Description:
+This FastAPI backend predicts Parkinson's Disease using
+voice biomarkers and a Support Vector Classifier (SVC).
+
+⚠️ Medical Disclaimer:
+This application is developed strictly for educational
+and academic purposes. It is NOT a medical diagnostic
+tool and must not be used for real medical decisions.
+
+© 2026 Mohamed Imraan. All rights reserved.
+=========================================================
 """
 
 from fastapi import FastAPI, HTTPException
@@ -14,30 +28,29 @@ import joblib
 import os
 from datetime import datetime
 
-# -------------------- Constants --------------------
-MODEL_PATH = "parkinsons_model.pkl"
-SCALER_PATH = "scaler.pkl"
-
-# -------------------- App Init --------------------
+# -------------------------------------------------------
+# FastAPI App Initialization
+# -------------------------------------------------------
 app = FastAPI(
     title="Parkinson's Disease Prediction API",
-    description="AI-powered API for Parkinson's disease prediction using voice features",
-    version="1.0.0",
+    description="AI-powered API for Parkinson's disease prediction using voice biomarkers",
+    version="1.0.0"
 )
 
-# -------------------- CORS --------------------
+# -------------------------------------------------------
+# CORS Configuration
+# -------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-    ],  # restrict in production
+    allow_origins=["*"],  # Change in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# -------------------- Input Schema --------------------
+# -------------------------------------------------------
+# Input Schema
+# -------------------------------------------------------
 class ParkinsonsInput(BaseModel):
     mdvp_fo: float = Field(..., ge=80, le=300)
     mdvp_fhi: float = Field(..., ge=100, le=600)
@@ -62,45 +75,43 @@ class ParkinsonsInput(BaseModel):
     d2: float = Field(..., ge=1, le=4)
     ppe: float = Field(..., ge=0, le=1)
 
-# -------------------- Response Schema --------------------
-class PredictionResponse(BaseModel):
-    prediction: str
-    confidence: float
-    probability_healthy: float
-    probability_parkinsons: float
-    status: str
-    timestamp: str
-
-# -------------------- Globals --------------------
+# -------------------------------------------------------
+# Global ML Objects
+# -------------------------------------------------------
 model: SVC | None = None
-scaler: StandardScaler | None = None
+scaler = StandardScaler()
 
-# -------------------- Model Training --------------------
+MODEL_PATH = "models/parkinsons_model.pkl"
+SCALER_PATH = "models/scaler.pkl"
+
+# -------------------------------------------------------
+# Model Training (Synthetic Data)
+# -------------------------------------------------------
 def train_model():
     global model, scaler
 
     np.random.seed(42)
-    n_samples = 300
+    samples = 300
 
-    healthy = np.random.randn(n_samples // 2, 22)
-    parkinsons = np.random.randn(n_samples // 2, 22)
+    healthy = np.random.normal(0, 1, (samples // 2, 22))
+    parkinsons = np.random.normal(0, 1, (samples // 2, 22))
 
-    healthy[:, 3] = np.random.uniform(0.001, 0.005, n_samples // 2)
-    parkinsons[:, 3] = np.random.uniform(0.005, 0.03, n_samples // 2)
+    X = np.vstack((healthy, parkinsons))
+    y = np.array([0] * (samples // 2) + [1] * (samples // 2))
 
-    X = np.vstack([healthy, parkinsons])
-    y = np.hstack([np.zeros(n_samples // 2), np.ones(n_samples // 2)])
-
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    scaler.fit(X)
+    X_scaled = scaler.transform(X)
 
     model = SVC(kernel="rbf", probability=True, random_state=42)
     model.fit(X_scaled, y)
 
+    os.makedirs("models", exist_ok=True)
     joblib.dump(model, MODEL_PATH)
     joblib.dump(scaler, SCALER_PATH)
 
-# -------------------- Load Model --------------------
+# -------------------------------------------------------
+# Load Model
+# -------------------------------------------------------
 def load_model():
     global model, scaler
 
@@ -110,39 +121,66 @@ def load_model():
     else:
         train_model()
 
-# -------------------- Startup --------------------
+# -------------------------------------------------------
+# Startup Event
+# -------------------------------------------------------
 @app.on_event("startup")
 async def startup_event():
     load_model()
-    print("✅ Model loaded | API Ready")
+    print("✅ Model and scaler ready")
 
-# -------------------- Routes --------------------
+# -------------------------------------------------------
+# Routes
+# -------------------------------------------------------
 @app.get("/")
 async def root():
     return {
-        "message": "Parkinson's Disease Prediction API",
+        "api": "Parkinson's Disease Prediction API",
         "status": "running",
         "docs": "/docs",
+        "timestamp": datetime.now().isoformat()
     }
 
-@app.post("/predict", response_model=PredictionResponse)
-async def predict(data: ParkinsonsInput):
-    if model is None or scaler is None:
+@app.post("/predict")
+async def predict(data: ParkinsonsInput) -> Dict:
+    if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
-    features = np.array([[value for value in data.model_dump().values()]])
-    features_scaled = scaler.transform(features)
+    features = np.array([[
+        data.mdvp_fo,
+        data.mdvp_fhi,
+        data.mdvp_flo,
+        data.mdvp_jitter_percent,
+        data.mdvp_jitter_abs,
+        data.mdvp_rap,
+        data.mdvp_ppq,
+        data.jitter_ddp,
+        data.mdvp_shimmer,
+        data.mdvp_shimmer_db,
+        data.shimmer_apq3,
+        data.shimmer_apq5,
+        data.mdvp_apq,
+        data.shimmer_dda,
+        data.nhr,
+        data.hnr,
+        data.rpde,
+        data.dfa,
+        data.spread1,
+        data.spread2,
+        data.d2,
+        data.ppe
+    ]])
 
-    pred = model.predict(features_scaled)[0]
-    probs = model.predict_proba(features_scaled)[0]
+    scaled = scaler.transform(features)
+    prediction = model.predict(scaled)[0]
+    probability = model.predict_proba(scaled)[0]
 
     return {
-        "prediction": "Parkinson's Disease" if pred == 1 else "Healthy",
-        "confidence": round(float(max(probs) * 100), 2),
-        "probability_healthy": round(float(probs[0] * 100), 2),
-        "probability_parkinsons": round(float(probs[1] * 100), 2),
-        "status": "success",
-        "timestamp": datetime.now().isoformat(),
+        "prediction": "Parkinson's Disease" if prediction == 1 else "Healthy",
+        "confidence": round(float(max(probability)) * 100, 2),
+        "probability_healthy": round(float(probability[0]) * 100, 2),
+        "probability_parkinsons": round(float(probability[1]) * 100, 2),
+        "timestamp": datetime.now().isoformat()
     }
 
 @app.get("/health")
@@ -150,16 +188,12 @@ async def health():
     return {
         "status": "healthy",
         "model_loaded": model is not None,
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now().isoformat()
     }
 
-# -------------------- Run Server --------------------
+# -------------------------------------------------------
+# Run Server
+# -------------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
-
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8000)
