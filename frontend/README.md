@@ -30,3 +30,24 @@
 ---
 
 ## 📂 Project Structure
+
+```text
+📦 parkinsons-disease-prediction
+│
+├── 📂 frontend/
+│ │
+│ ├── 📂 public/
+│ │ │ └── index.html            # Main HTML file
+│ │
+│ ├── 📂 src/
+│ │ │ ├── App.jsx               # Main React component
+│ │ │ ├── index.js              # React DOM entry point
+│ │ │ └── index.css             # Global styles
+│ │
+│ ├── 📄 package.json           # Project metadata & dependencies
+│ │ ├── 📄 package-lock.json    # Dependency lock file (safe to upload)
+│ │ ├── 🚫 .gitignore           # Ignored files & folders
+│ │ └── 📘 README.md            # Frontend documentation
+│
+└── 📂 backend/                 # FastAPI + ML model (separate service)
+
